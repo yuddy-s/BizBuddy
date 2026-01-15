@@ -1,7 +1,23 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Lazy initialization - only create AI instance when needed and if API key exists
+let ai: GoogleGenAI | null = null;
+
+const getAI = (): GoogleGenAI | null => {
+  // Vite defines process.env.API_KEY and process.env.GEMINI_API_KEY via vite.config.ts
+  const apiKey = (process.env.API_KEY || process.env.GEMINI_API_KEY) as string | undefined;
+  
+  if (!ai && apiKey && apiKey !== 'undefined' && apiKey !== 'null' && apiKey.trim() !== '') {
+    try {
+      ai = new GoogleGenAI({ apiKey: apiKey });
+    } catch (error) {
+      console.error("Failed to initialize GoogleGenAI:", error);
+      return null;
+    }
+  }
+  return ai;
+};
 
 export interface BusinessInsight {
   title: string;
@@ -20,6 +36,16 @@ export const getBusinessInsights = async (
   transactions: any[],
   orgName: string
 ): Promise<BusinessInsight[]> => {
+  const aiInstance = getAI();
+  if (!aiInstance) {
+    return [{
+      title: "AI Insights Unavailable",
+      content: "Gemini API key is not configured. Please add GEMINI_API_KEY to your environment variables.",
+      recommendation: "The app will work normally, but AI-powered insights will be disabled until the API key is set.",
+      priority: "Low" as const
+    }];
+  }
+
   try {
     const summary = {
       totalRevenue: transactions.reduce((acc, t) => acc + Number(t.amount), 0),
@@ -39,7 +65,7 @@ export const getBusinessInsights = async (
       Provide 3 actionable business insights or suggestions to increase shop efficiency, upsell performance parts, or improve cash flow.
     `;
 
-    const response = await ai.models.generateContent({
+    const response = await aiInstance.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: prompt,
       config: {
@@ -77,6 +103,11 @@ export const generateMarketingCopy = async (params: {
   context: string;
   tone: string;
 }): Promise<MarketingCopy> => {
+  const aiInstance = getAI();
+  if (!aiInstance) {
+    return { subject: "Exclusive Performance Update", body: "Hello {customerName}, check out our latest upgrades!" };
+  }
+
   try {
     const prompt = `
       You are a high-end marketing expert specifically for automotive performance and tuning shops.
@@ -90,7 +121,7 @@ export const generateMarketingCopy = async (params: {
       - Use placeholders like {customerName} or {shopName} where appropriate.
     `;
 
-    const response = await ai.models.generateContent({
+    const response = await aiInstance.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: prompt,
       config: {
@@ -114,6 +145,11 @@ export const generateMarketingCopy = async (params: {
 };
 
 export const getMarketingAdvice = async (question: string, stats: any): Promise<string> => {
+  const aiInstance = getAI();
+  if (!aiInstance) {
+    return "Ensure consistent communication through reminders and high-quality photography of your builds.";
+  }
+
   try {
     const prompt = `
       As an automotive marketing strategist, answer this: "${question}"
@@ -122,7 +158,7 @@ export const getMarketingAdvice = async (question: string, stats: any): Promise<
       Keep your advice actionable, concise, and tailored to the car enthusiast market.
     `;
 
-    const response = await ai.models.generateContent({
+    const response = await aiInstance.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: prompt,
     });
