@@ -1,0 +1,7 @@
+{
+  "name": "BizBuddy - Automotive Performance Shop Manager",
+  "description": "A high-performance multi-tenant SaaS dashboard for car performance shops to manage invoices, customers, transactions, and business analytics with a sleek dark-mode automotive aesthetic.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
